@@ -62,48 +62,48 @@ def sort_dicom_file(filename,outupt_dir):
     '''
     try:
         dataset = pydicom.read_file(filename)
-    except:
-        print "something wrong with", filename
-        return 
+    
+        #CFMM's newer data:'khan^NeuroAnalytics'->['khan','NeuroAnalytics']
+        #CFMM's older GE data:'peter DTI'->['peter','DTI']
+        pp = dataset.StudyDescription.replace('^',' ').split() 
+        patient = dataset.PatientName.partition('^')[0]
 
-    #CFMM's newer data:'khan^NeuroAnalytics'->['khan','NeuroAnalytics']
-    #CFMM's older GE data:'peter DTI'->['peter','DTI']
-    pp = dataset.StudyDescription.replace('^',' ').split() 
-    patient = dataset.PatientName.partition('^')[0]
+        path = os.path.join(outupt_dir, clean_path(pp[0]))
+        if not os.path.exists(path):
+            # Everyone can read the principal directory
+            # This is required so individuals with access to a project,
+            # but not principal can get to their projects
+            #self._mkdir(path, permissions=stat.S_IRWXU | stat.S_IRWXG | stat.S_IRWXO, gid=self.principal_gid)
 
-    path = os.path.join(outupt_dir, clean_path(pp[0]))
-    if not os.path.exists(path):
-        # Everyone can read the principal directory
-        # This is required so individuals with access to a project,
-        # but not principal can get to their projects
-        #self._mkdir(path, permissions=stat.S_IRWXU | stat.S_IRWXG | stat.S_IRWXO, gid=self.principal_gid)
-
-        #print path 
-        os.makedirs(path)
-
-    for nextpath in [pp[1],
-                    dataset.StudyDate,
-                    patient,
-                    '.'.join([dataset.StudyID or 'NA', hashcode(dataset.StudyInstanceUID)]),
-                    '{series:04d}'.format(series=dataset.SeriesNumber)]:
-        #print nextpath
-        path = os.path.join(path, clean_path(nextpath))
-        if os.path.exists(path):
-            continue
-        else:
-            #self._mkdir(path, permissions=stat.S_IRWXU | stat.S_IRWXG | stat.S_IWOTH | stat.S_IXOTH)
             #print path 
             os.makedirs(path)
 
-    sorted_filename = '{patient}.{modality}.{study}.{series:04d}.{image:04d}.{date}.{unique}.dcm'.format(
-        patient=patient.upper(),
-        modality=dataset.Modality,
-        study=dataset.StudyDescription.upper(),
-        series=dataset.SeriesNumber,
-        image=dataset.InstanceNumber,
-        date=dataset.StudyDate,
-        unique=hashcode(dataset.SOPInstanceUID),
-        )
+        for nextpath in [pp[1],
+                        dataset.StudyDate,
+                        patient,
+                        '.'.join([dataset.StudyID or 'NA', hashcode(dataset.StudyInstanceUID)]),
+                        '{series:04d}'.format(series=dataset.SeriesNumber)]:
+            #print nextpath
+            path = os.path.join(path, clean_path(nextpath))
+            if os.path.exists(path):
+                continue
+            else:
+                #self._mkdir(path, permissions=stat.S_IRWXU | stat.S_IRWXG | stat.S_IWOTH | stat.S_IXOTH)
+                #print path 
+                os.makedirs(path)
+
+        sorted_filename = '{patient}.{modality}.{study}.{series:04d}.{image:04d}.{date}.{unique}.dcm'.format(
+            patient=patient.upper(),
+            modality=dataset.Modality,
+            study=dataset.StudyDescription.upper(),
+            series=dataset.SeriesNumber,
+            image=dataset.InstanceNumber,
+            date=dataset.StudyDate,
+            unique=hashcode(dataset.SOPInstanceUID),
+            )
+    except:
+        print "something wrong with", filename
+        return 
 
     sorted_full_filename = os.path.join(path, clean_path(sorted_filename))
     shutil.copy(filename,sorted_full_filename)
@@ -215,5 +215,5 @@ if __name__=="__main__":
     main(dicom_dir,tar_dest_dir)
     
 #test
-#python dicom2tar.py  '/mnt/hgfs/test/dicom2bids/' '~/test/dicom2tar'
+#python dicom2tar.py  /mnt/hgfs/test/dicom2bids/ ~/test/dicom2tar
 
