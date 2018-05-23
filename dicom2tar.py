@@ -91,5 +91,7 @@ if __name__ == "__main__":
     main(dicom_dir, output_dir)
 
 # test command line
-# linux: python dicom2tar.py  /mnt/hgfs/test/dicom2bids/ ~/test/dicom2tar
+# linux: python dicom2tar.py  /mnt/hgfs/test/dicom2tar/ ~/test/dicom2tar
+# sudo /home/ylu/apps/singularity/bin/singularity build ~/singularities/dicom2tar.simg Singularity.v0.0.2
 # windows: python dicom2tar.py  "D:\OneDrive - The University of Western Ontario\projects\dicom2tar\data\small_data" d:/test
+# sudo /home/ylu/apps/singularity/bin/singularity run -B /mnt:/mnt -B /home:/home  /home/ylu/singularities/dicom2tar.simg  /mnt/hgfs/projects/dicom2tar/data/small_data /home/ylu/test/dicom2tar
