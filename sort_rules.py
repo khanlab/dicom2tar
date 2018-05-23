@@ -1,3 +1,74 @@
+#!/usr/bin/env python
+'''
+dicom sort rule functions:
+
+    sort_rule_demo: a simple demo sort rule
+    sort_rule_CFMM: CFMM's sort rule
+
+Author: YingLi Lu
+Email:  yinglilu@gmail.com
+Date:   2018-05-22
+
+note:
+    Tested on windows 10/ubuntu 16.04, python 2.7.14
+'''
+
+import os
+import re
+import pydicom
+import logging
+
+
+def sort_rule_demo(filename):
+    '''
+    A simple sort rule:
+
+    patient_name
+      |-study_date
+        |-series_number
+          |-{patient_name}.{study_data}.{series_number}.{image_instance_number:04d}.dcm
+          ... 
+        |-series_number
+        ...
+
+    intput:
+        filename: dicom filename
+    output:
+        a dictionary:
+            key: filename
+            value: patient_name/study_date/sereis_number/{patient_name}.{study_data}.{series_number}.{image:04d}.dcm
+
+    '''
+    logger = logging.getLogger(__name__)
+
+    def clean_path(path):
+        return re.sub(r'[^a-zA-Z0-9.-]', '_', '{0}'.format(path))
+
+    try:
+        dataset = pydicom.read_file(filename)
+
+        patient_name = clean_path(dataset.PatientName.replace('^', '_'))
+        print('patient_name',patient_name)
+        study_date = clean_path(dataset.StudyDate)
+        series_number = clean_path(
+            '{series_number:04d}'.format(series_number=dataset.SeriesNumber))
+
+        path = os.path.join(patient_name, study_date, series_number)
+        sorted_filename = '{patient}.{study_date}.{series_number}.{image_instance_number:04d}.dcm'.format(
+            patient=patient_name,
+            study_date=study_date,
+            series_number=dataset.SeriesNumber,
+            image_instance_number=dataset.InstanceNumber,
+        )
+
+    except Exception as e:
+        logger.exception('something wrong with {}'.format(filename))
+        return None
+
+    sorted_full_filename = os.path.join(path, sorted_filename)
+    return sorted_full_filename
+
+
 def sort_rule_CFMM(filename):
     '''
     CFMM's Dicom sort rule
@@ -31,6 +102,8 @@ def sort_rule_CFMM(filename):
                     -1970_01_01_C003
                         -1.AC168B3C
     '''
+
+    logger = logging.getLogger(__name__)
 
     def clean_path(path):
         return re.sub(r'[^a-zA-Z0-9.-]', '_', '{0}'.format(path))
@@ -68,10 +141,9 @@ def sort_rule_CFMM(filename):
             unique=hashcode(dataset.SOPInstanceUID),
         )
     except Exception as e:
-        logging.exception('something wrong with {}'.format(filename))
+        logger.exception('something wrong with {}'.format(filename))
         return None
 
     sorted_full_filename = os.path.join(path, sorted_filename)
 
     return sorted_full_filename
-

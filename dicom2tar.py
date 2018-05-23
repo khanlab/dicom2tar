@@ -1,28 +1,26 @@
 #!/usr/bin/env python
 '''
-CFMM's dicom files sort rule function, and sort CFMM' data use DicomSorter
+sort or tar CFMM' data with DicomSorter
 
 Author: YingLi Lu
 Email:  yinglilu@gmail.com
-Date:   2018-05-15
+Date:   2018-05-22
 
 Note:
-    Tested on python 2.7.15
+    Tested on windows 10/ubuntu 16.04, python 2.7.14
 
 '''
 import sys
 import os
 import re
-import pydicom
 import logging
 
 import sort_rules
 import DicomSorter
 
-logging.basicConfig(filename = 'a.log', level=logging.DEBUG,
+logging.basicConfig(level=logging.DEBUG,
                     format='%(asctime)s - %(levelname)s -%(message)s')
     
-
 def main(dicom_dir, output_dir):
     '''
     example showing how to use DicomSorter for CFMM's dicom data
@@ -41,26 +39,44 @@ def main(dicom_dir, output_dir):
     if not os.path.exists(output_dir):
         os.makedirs(output_dir)
 
+    ######
+    # CFMM
+    ######
     with DicomSorter.DicomSorter(dicom_dir, sort_rules.sort_rule_CFMM, output_dir) as d:
-        #######
-        # sort
-        #######
-        sorted_dirs = d.sort()
-        #logging
-        for item in sorted_dirs:
-            logger.info("sorted directory created: {}".format(item))
+        # #######
+        # # sort
+        # #######
+        # sorted_dirs = d.sort()
+        # #logging
+        # for item in sorted_dirs:
+        #     logger.info("sorted directory created: {}".format(item))
 
 
-        # #######
-        # # tar
-        # #######
-        # # according to CFMM's rule, folder depth is 5:
-        # # pi/project/study_date/patient/studyID_and_hash_studyInstanceUID
-        # tar_full_filenames = d.tar(5)
-        
-        # # logging
-        # for item in tar_full_filenames:
-        #     logger.info("tar file created: {}".format(item))
+        #######
+        # tar
+        #######
+        # pi/project/study_date/patient/studyID_and_hash_studyInstanceUID
+        tar_full_filenames = d.tar(5)
+        # logging
+        for item in tar_full_filenames:
+            logger.info("tar file created: {}".format(item))
+
+    # ######
+    # # demo
+    # ######
+    # with DicomSorter.DicomSorter(dicom_dir, sort_rules.sort_rule_demo, output_dir) as d:
+    #     # sort
+    #     sorted_dirs = d.sort()
+    #     #logging
+    #     for item in sorted_dirs:
+    #         logger.info("sorted directory created: {}".format(item))
+
+    #     # tar
+    #     # patient_name/study_date/series_number/new_filename.dcm
+    #     tar_full_filenames = d.tar(2)
+    #     # logging
+    #     for item in tar_full_filenames:
+    #         logger.info("tar file created: {}".format(item))
 
 if __name__ == "__main__":
 

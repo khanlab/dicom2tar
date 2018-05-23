@@ -1,13 +1,13 @@
 #!/usr/bin/env python
 '''
-Define a DicomSorter class, which can sort dicom/compressed files, or tar the sorted files, to a destination directory.
+Define a DicomSorter class, which can sort dicom/compressed files, and tar the sorted files, to a destination directory.
 
 Author: YingLi Lu
 Email:  yinglilu@gmail.com
-Date:   2018-05-15
+Date:   2018-05-22
 
 Note:
-    Tested on python 2.7.15
+    Tested on windows 10/ubuntu 16.04, python 2.7.14
 '''
 
 import os
@@ -15,9 +15,10 @@ import tarfile
 import zipfile
 import shutil
 import tempfile
-import glob
 import uuid
 import logging
+from collections import defaultdict
+
 
 class DicomSorter():
     '''
@@ -25,8 +26,8 @@ class DicomSorter():
 
     Given a dicom directory:
         1. Find compressed files(if any) recursively, extract them temporally. Support formats:.  zip, .tgz, .tar.gz, tar.bz2
-        2. Find dicom files recursively, sort(organizing and renaming) them, according to a given 'sort_rule_function', to a destination directory
-        3. Tar the sorted dicom files to a destination directory.
+        2. Find dicom files recursively, sort(organizing and renaming) them, according to a given 'sort_rule_function',
+        3. Sort or Tar the sorted dicom files to a destination directory.
 
     attributes:
         dicom_dir: 
@@ -39,11 +40,12 @@ class DicomSorter():
             extract compressed files to this directory temporally, default is platform's temp dir.
 
     methods:
-        sort()
         tar()
-    
+        sort()
+
     Note: 
-        When extract larger compressed files on a platform with limit storage capacity temp folder, you might want to change the default 'extract_to_dir'
+        When extract larger compressed files on a platform, like sharcnet, with limit storage capacity temp folder, 
+        you might want to change the default 'extract_to_dir'
 
     '''
 
@@ -57,7 +59,6 @@ class DicomSorter():
         self.sort_rule_function = sort_rule_function
         self.output_dir = output_dir
 
-        self._extract_to_dir_uniq = None
         # extract_to_dir, default is platform's tmp dir
         if not extract_to_dir:
             temp_dir = tempfile.gettempdir()
@@ -67,122 +68,136 @@ class DicomSorter():
 
         # _extract_to_dir_uniq = extract_to_dir/uniq-string
         # `rmtree _extract_to_dir_uniq` after the sorting
-        uniq_string = self._generate_uniq_string()
         self._extract_to_dir_uniq = os.path.join(
-            self.extract_to_dir, "DicomSorter_extract_" + uniq_string)
-
+            self.extract_to_dir, "DicomSorter" + self._generate_uniq_string())
         if not os.path.exists(self._extract_to_dir_uniq):
             os.makedirs(self._extract_to_dir_uniq)
 
-        self._sort_to_dir_uniq = None
-
     def sort(self):
         '''
-        extract, sort, copy(organizing and renaming) dicom files into hierarchical directories
+        extract, apply sort rule, copy(organizing and renaming) dicom files into hierarchical directories
+
+        output:
+            tar_full_filename_list: list of resulted tar filenames
+
+        note: 
+            write hierarchical direcotires and files on disk
+
         '''
-        # walk and extract compressed files
+        ######
+        # extract compressed files if any
+        ######
         self._walk_and_extract(
             self.dicom_dir, self._compressed_exts, self._extract_to_dir_uniq)
 
-        # add _extract_to_dir_uniq directory to the search directory
+        # add _extract_to_dir_uniq directory in the search directories
         dicom_dirs = [self.dicom_dir, self._extract_to_dir_uniq]
 
+        ######
         # walk and apply sort rule
-        before_after_sort_rule_dict = self._walk_and_apply_sort_rule(
+        ######
+        # return value is a list of list:
+        #   [ [original_full_filename1, path/to/new-filename1],# [original_full_filename1, path/to/new-filename1],... ]
+        before_after_sort_rule_list = self._walk_and_apply_sort_rule(
             dicom_dirs, self.sort_rule_function)
 
-        sorted_dirs=[]
+        # for logging
+        sorted_dirs = []
 
         # copy: organizing and renaming original dicom files
-        for source, relative_dest in before_after_sort_rule_dict.items():
+        for item in before_after_sort_rule_list:
 
-            #for logging
-            sorted_dir = os.path.join(self.output_dir,relative_dest.split(os.sep)[0])
+            # example: c:\\users\\user\\appdata\\local\\temp\\DicomSorter_8a46b089-fe90-4ee7-90fe-3cd9fc443d09\\0003.tar.gz816c904c-8e3e-4cff-8624-9fe4efd66815\\0003\\00001.dcm'
+            original_full_filename = item[0]
+            # example: PI\\Project\\19700101\\1970_01_01_T2\\1.9AC66A0D\\0003\\1970_01_01_T2.MR.PI_project.0003.0194.19700101.D6C44EC8.dcm
+            relative_path_new_filename = item[1]
 
+            source = item[0]
+            relative_dest = item[1]
+
+            # only the first element, example: PI
+            sorted_dir = os.path.join(
+                self.output_dir, relative_path_new_filename.split(os.sep)[0])
             if sorted_dir not in sorted_dirs:
                 sorted_dirs.append(sorted_dir)
 
-            dest = os.path.join(self.output_dir,relative_dest)
-            dest_dir = os.path.dirname(dest)
+            full_path_new_full_filename = os.path.join(self.output_dir, relative_path_new_filename)
+            dest_dir = os.path.dirname(full_path_new_full_filename)
             if not os.path.exists(dest_dir):
                 os.makedirs(dest_dir)
-            shutil.copy(source, dest)
 
-        return  sorted_dirs
+            shutil.copy(original_full_filename, full_path_new_full_filename)
 
-    def tar(self, depth):
+        return sorted_dirs
+
+    def tar(self, depth, tar_filename_sep='_'):
         '''
-        extract, sort, copy(organizing and renaming), and tar 
+        extract, apply sort rule, and create tar files
 
         input:
-            depth:
-                1. tar filename is named according to 'depth'.
-                    example:
-                        given tree: /home/user/output_dir/project/study_date/patient_name/study_id
-                        given depth = 4, 
-                        tar filename is: project_study_date_patient_name_study_id.tar
-
-                2. tar's arcname is named according to 'depth'
-                    with the above example,
-                    tar file will store relative path: project/study_date/patient_name/study_id
-                    instead of absolute path /home/user/output_dir/project/study_date/patient_name/study_id
+            depth: tar filename is named according to 'depth'.
+                example:
+                    given tree: /home/user/output_dir/project/study_date/patient_name/study_id
+                    given depth = 4, 
+                    tar filename is: project_study_date_patient_name_study_id.tar
+            tar_filename_sep: seprator of the tar file name elements        
 
         output:
-            tar_full_filename_list:
-                list of resulted tar filenames
+            tar_full_filename_list: list of resulted tar filenames
+
+        note: 
+            write tar files on disk
 
         '''
-        # extract
+        ######
+        # extract compressed files if any
+        ######
         self._walk_and_extract(
             self.dicom_dir, self._compressed_exts, self._extract_to_dir_uniq)
 
-        # add _extract_to_dir_uniq directory to the search directory
+        # add _extract_to_dir_uniq directory in the search directories
         dicom_dirs = [self.dicom_dir, self._extract_to_dir_uniq]
 
-        # create temp _sort_to_dir_uniq
-        uniq_string = self._generate_uniq_string()
-        self._sort_to_dir_uniq = os.path.join(
-            self.extract_to_dir, "DicomSorter_sort_"+uniq_string)
-
+        ######
         # walk and apply sort rule
-        before_after_sort_rule_dict = self._walk_and_apply_sort_rule(
+        ######
+        # return value is a list of list:
+        #   [[original_full_filename1, path/to/new-filename1],# [original_full_filename1, path/to/new-filename1],...]
+        before_after_sort_rule_list = self._walk_and_apply_sort_rule(
             dicom_dirs, self.sort_rule_function)
 
-        # copy: organizing and renaming original dicom files
-        for source, relative_dest in before_after_sort_rule_dict.items():
-            dest = os.path.join(self._sort_to_dir_uniq,relative_dest)
-            
-            dest_dir = os.path.dirname(dest)
-            if not os.path.exists(dest_dir):
-                os.makedirs(dest_dir)
-            shutil.copy(source, dest)
-
-        dirs = self._list_paths_with_depth_under_dir(
-            self._sort_to_dir_uniq, depth)
-
+        ######
         # tar
-        tar_full_filenames = []
-        for dir in dirs:
+        ######
+
+        # get a dict, key is tar_full_filename, key is a list of list:
+        #   {tar_full_filename1:[[original_full_filename1,/path/to/new_filename1],[original_full_filename2,/path/to/new_filename2],...],
+        #   tar_full_filename2:[[original_full_filename1,/path/to/new_filename2],[original_full_filename2,/path/to/new_filename2],...],...}
+        tar_full_filename_dict = defaultdict(list)
+
+        for item in before_after_sort_rule_list:
+            # c:\\users\\user\\appdata\\local\\temp\\DicomSorter_8a46b089-fe90-4ee7-90fe-3cd9fc443d09\\0003.tar.gz816c904c-8e3e-4cff-8624-9fe4efd66815\\0003\\00001.dcm'
+            origianl_full_filename = item[0]
+            #'PI\\Project\\19700101\\1970_01_01_T2\\1.9AC66A0D\\0003\\1970_01_01_T2.MR.PI_project.0003.0194.19700101.D6C44EC8.dcm'
+            relative_path_new_filename = item[1]
 
             # get tar file name
-            dir_split = dir.split(os.sep)
-            tar_filename = "_".join(dir_split[-depth:])+".tar"
+            #['PI','Project','19700101','1970_01_01_T2','1.9AC66A0D','0003','1970_01_01_T2.MR.PI_project.0003.0194.19700101.D6C44EC8.dcm']
+            dir_split = relative_path_new_filename.split(os.sep)
+
+            tar_filename = tar_filename_sep.join(dir_split[:depth])+".tar"
             tar_full_filename = os.path.join(self.output_dir, tar_filename)
+            tar_full_filename_dict[tar_full_filename].append(item)
 
-            # arcname: use relative path instead of absolute path in tar file
-            # exmple:
-            # dir:
-            #   c:\users\user\appdata\local\temp\DicomSorter_sort_3e6940f2-1241-421d-b9fb-122230b33c39\pi\project\20170101
-            # arcname:
-            #   pi\project\20170101
-            # tar.add(dir, arcname = arcname) will tar 'dir' with an alternative name arcname
+        for tar_full_filename, items in tar_full_filename_dict.items():
+
             with tarfile.open(tar_full_filename, "w") as tar:
-                arcname = os.path.join(*dir_split[-depth:])
-                tar.add(dir, arcname=arcname)
-
-            tar_full_filenames.append(tar_full_filename)
+                for item in items:
+                    arcname = item[1]
+                    tar.add(item[0], arcname=arcname)
 
         # for logging
+        tar_full_filenames = tar_full_filename_dict.keys()
         return tar_full_filenames
 
     def _walk_and_apply_sort_rule(self, dicom_dirs, sort_rule_function):
@@ -192,57 +207,32 @@ class DicomSorter():
         input:
             dicom_dirs
             sort_rule_function:
-          
+
         output:
-            sorted_dict: a dictionary
-                key: original dicom file's full path filename
-                value: sorted dicom file's relative path filename: e.g. /pi/study_date/new-filename.dcm
+            before_after_sort_rule_list: a list of list.
+                sub_list[0]: original dicom-file's full path filename
+                sub_list[1]: sorted-dicom-file's relative path filename: e.g. /pi/study_date/new-filename.dcm
         '''
-        before_after_sort_rule_dict = {}
+        before_after_sort_rule_list = []
         for dicom_dir in dicom_dirs:
             for root, directories, filenames in os.walk(dicom_dir):
                 for filename in filenames:
                     full_filename = os.path.join(root, filename)
                     if not full_filename.endswith(self._compressed_exts):
                         try:
-                            sorted_relative_path_filename = sort_rule_function(full_filename)
+                            sorted_relative_path_filename = sort_rule_function(
+                                full_filename)
                             # apply sort_rule_function on non-dicom or bad dicom return None
                             if sorted_relative_path_filename is not None:
-                                before_after_sort_rule_dict[full_filename] = sorted_relative_path_filename
+                                before_after_sort_rule_list.append(
+                                    [full_filename, sorted_relative_path_filename])
                         except Exception as e:
                             self.logger.exception(e)
 
-        return before_after_sort_rule_dict
+        return before_after_sort_rule_list
 
     def _generate_uniq_string(self):
         return str(uuid.uuid4())
-
-    def _list_paths_with_depth_under_dir(self, root_dir, depth):
-        '''
-        list all paths with a 'depth' under 'root_dir'
-
-        Example: given tree
-            home
-              |-user
-                |-root_dir
-                  |-dir1
-                  |-dir2-1
-                    |-dir3
-                    ...
-                  |-dir2-2    
-
-            depth = 2 will list ['/home/user/root_dir/dir1/dir2-1','/home/user/root_dir/dir1/dir2-2']
-        '''
-
-        if depth <= 0:
-            return []
-
-        glob_rule = os.sep.join(depth*['*'])
-
-        files_dirs = glob.glob(os.path.join(root_dir, glob_rule))
-        dirs = [e for e in files_dirs if os.path.isdir(e)]
-        
-        return dirs
 
     def _walk_and_extract(self, input_dir, compressed_exts, to_dir):
         #self.input_dir, self._extract_to_dir_uniq
@@ -286,11 +276,5 @@ class DicomSorter():
         '''
         remove temp directories
         '''
-        if self._extract_to_dir_uniq is not None:
-            if os.path.exists(self._extract_to_dir_uniq):
-                shutil.rmtree(self._extract_to_dir_uniq)
-
-        if self._sort_to_dir_uniq is not None:
-            if os.path.exists(self._sort_to_dir_uniq):
-                shutil.rmtree(self._sort_to_dir_uniq)
-
+        if os.path.exists(self._extract_to_dir_uniq):
+            shutil.rmtree(self._extract_to_dir_uniq)
