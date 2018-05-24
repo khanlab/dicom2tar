@@ -11,6 +11,9 @@ test_small:
 test_big:
 	python dicom2tar.py /mnt/hgfs/projects/dicom2tar/data/ ~/test/dicom2tar
 
+test_converter:
+	python dicom2tar.py /mnt/hgfs/projects/dicom2tar/data/MRS_Physio_data/three_dicoms_from_Igor ~/test/dicom2tar
+
 build: 
 	sudo ${SINGULARITY} build --force ${SINGULARITY_IMAGE} ${SINGULARITY_FILE}
 

@@ -43,7 +43,7 @@ class DicomSorter():
         tar()
         sort()
 
-    Note: 
+    Note:
         When extract larger compressed files on a platform, like sharcnet, with limit storage capacity temp folder, 
         you might want to change the default 'extract_to_dir'
 
@@ -112,16 +112,14 @@ class DicomSorter():
             # example: PI\\Project\\19700101\\1970_01_01_T2\\1.9AC66A0D\\0003\\1970_01_01_T2.MR.PI_project.0003.0194.19700101.D6C44EC8.dcm
             relative_path_new_filename = item[1]
 
-            source = item[0]
-            relative_dest = item[1]
-
             # only the first element, example: PI
             sorted_dir = os.path.join(
                 self.output_dir, relative_path_new_filename.split(os.sep)[0])
             if sorted_dir not in sorted_dirs:
                 sorted_dirs.append(sorted_dir)
 
-            full_path_new_full_filename = os.path.join(self.output_dir, relative_path_new_filename)
+            full_path_new_full_filename = os.path.join(
+                self.output_dir, relative_path_new_filename)
             dest_dir = os.path.dirname(full_path_new_full_filename)
             if not os.path.exists(dest_dir):
                 os.makedirs(dest_dir)
