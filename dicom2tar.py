@@ -12,7 +12,6 @@ Note:
 '''
 import sys
 import os
-import re
 import logging
 
 import sort_rules
@@ -20,10 +19,11 @@ import DicomSorter
 
 logging.basicConfig(level=logging.DEBUG,
                     format='%(asctime)s - %(levelname)s -%(message)s')
-    
+
+
 def main(dicom_dir, output_dir):
     '''
-    example showing how to use DicomSorter for CFMM's dicom data
+    use DicomSorter sort or tar CFMM's dicom data
 
     input:
         dicom_dir: folder contains dicom files(and/or compressed files:.zip/.tgz/.tar.gz/.tar.bz2)
@@ -33,50 +33,54 @@ def main(dicom_dir, output_dir):
     logger = logging.getLogger(__name__)
 
     if not os.path.exists(dicom_dir):
-        print("Error: {} not exist!".format(dicom_dir))
+        logger.error("{} not exist!".format(dicom_dir))
         return False
 
     if not os.path.exists(output_dir):
         os.makedirs(output_dir)
 
     ######
-    # CFMM
+    # CFMM sort rule
     ######
-    with DicomSorter.DicomSorter(dicom_dir, sort_rules.sort_rule_CFMM, output_dir) as d:
-        # #######
-        # # sort
-        # #######
-        # sorted_dirs = d.sort()
-        # #logging
-        # for item in sorted_dirs:
-        #     logger.info("sorted directory created: {}".format(item))
+    try:
+        with DicomSorter.DicomSorter(dicom_dir, sort_rules.sort_rule_CFMM, output_dir) as d:
+            # #######
+            # # sort
+            # #######
+            # sorted_dirs = d.sort()
+            # # logging
+            # for item in sorted_dirs:
+            #     logger.info("sorted directory created: {}".format(item))
 
+            #######
+            # tar
+            #######
+            # pi/project/study_date/patient/studyID_and_hash_studyInstanceUID
+            tar_full_filenames = d.tar(5)
+            # logging
+            for item in tar_full_filenames:
+                logger.info("tar file created: {}".format(item))
 
-        #######
-        # tar
-        #######
-        # pi/project/study_date/patient/studyID_and_hash_studyInstanceUID
-        tar_full_filenames = d.tar(5)
-        # logging
-        for item in tar_full_filenames:
-            logger.info("tar file created: {}".format(item))
+        # ######
+        # # demo sort rule
+        # ######
+        # with DicomSorter.DicomSorter(dicom_dir, sort_rules.sort_rule_demo, output_dir) as d:
+        #     # sort
+        #     sorted_dirs = d.sort()
+        #     #logging
+        #     for item in sorted_dirs:
+        #         logger.info("sorted directory created: {}".format(item))
 
-    # ######
-    # # demo
-    # ######
-    # with DicomSorter.DicomSorter(dicom_dir, sort_rules.sort_rule_demo, output_dir) as d:
-    #     # sort
-    #     sorted_dirs = d.sort()
-    #     #logging
-    #     for item in sorted_dirs:
-    #         logger.info("sorted directory created: {}".format(item))
+        #     # tar
+        #     # patient_name/study_date/series_number/new_filename.dcm
+        #     tar_full_filenames = d.tar(2)
+        #     # logging
+        #     for item in tar_full_filenames:
+        #         logger.info("tar file created: {}".format(item))
 
-    #     # tar
-    #     # patient_name/study_date/series_number/new_filename.dcm
-    #     tar_full_filenames = d.tar(2)
-    #     # logging
-    #     for item in tar_full_filenames:
-    #         logger.info("tar file created: {}".format(item))
+    except Exception as e:
+        logger.exception(e)
+
 
 if __name__ == "__main__":
 
@@ -89,9 +93,3 @@ if __name__ == "__main__":
         output_dir = sys.argv[2]
 
     main(dicom_dir, output_dir)
-
-# test command line
-# linux: python dicom2tar.py  /mnt/hgfs/test/dicom2tar/ ~/test/dicom2tar
-# sudo /home/ylu/apps/singularity/bin/singularity build ~/singularities/dicom2tar.simg Singularity.v0.0.2
-# windows: python dicom2tar.py  "D:\OneDrive - The University of Western Ontario\projects\dicom2tar\data\small_data" d:/test
-# sudo /home/ylu/apps/singularity/bin/singularity run -B /mnt:/mnt -B /home:/home  /home/ylu/singularities/dicom2tar.simg  /mnt/hgfs/projects/dicom2tar/data/small_data /home/ylu/test/dicom2tar

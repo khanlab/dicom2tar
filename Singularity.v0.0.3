@@ -2,9 +2,17 @@ Bootstrap: docker
 From: ubuntu:xenial
 
 %files
-dicom2tar.py
-DicomSorter.py
-sort_rules.py
+#dicom2tar.py
+#DicomSorter.py
+#sort_rules.py
+#extract_cmrr_physio.py
+
+#------------------------------------
+%setup
+#------------------------------------
+
+mkdir -p $SINGULARITY_ROOTFS/apps/dicom2tar
+cp *.py $SINGULARITY_ROOTFS/apps/dicom2tar
 
 #------------------------------------
 %post
@@ -23,14 +31,25 @@ apt-get update && apt-get install -y --no-install-recommends apt-utils \
     rsync \
     openssh-client
 
-pip install -U pip setuptools
+sudo pip install --upgrade pip
+sudo pip install --upgrade setuptools
 
-git clone https://www.github.com/pydicom/pydicom.git
-cd pydicom
-git checkout 1314e86e3a96d0c226a03fb21136c0ff3c3ce7d3  #commit from Feb 1 2018
-python setup.py install
+##pydicom
+#git clone https://www.github.com/pydicom/pydicom.git
+#cd pydicom
+#git checkout 1314e86e3a96d0c226a03fb21136c0ff3c3ce7d3  #commit from Feb 1 2018
+#python setup.py install
 
+#dicomunwrap, will install pydicom
+cd /apps
+git clone https://gitlab.com/cfmm/DicomRaw
+cd DicomRaw
+sudo pip install -r requirements.txt
+
+%environment
+export PATH=/apps/DicomRaw/bin:$PATH
+export PATH=/apps/dicom2tar:$PATH
 
 %runscript 
-exec /dicom2tar.py $@
+exec /apps/dicom2tar/dicom2tar.py "$@"
 

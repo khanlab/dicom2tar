@@ -45,10 +45,10 @@ def sort_rule_demo(filename):
         return re.sub(r'[^a-zA-Z0-9.-]', '_', '{0}'.format(path))
 
     try:
-        dataset = pydicom.read_file(filename)
+        dataset = pydicom.read_file(filename, stop_before_pixels=True)
 
         patient_name = clean_path(dataset.PatientName.replace('^', '_'))
-        print('patient_name',patient_name)
+        print('patient_name', patient_name)
         study_date = clean_path(dataset.StudyDate)
         series_number = clean_path(
             '{series_number:04d}'.format(series_number=dataset.SeriesNumber))
@@ -60,9 +60,11 @@ def sort_rule_demo(filename):
             series_number=dataset.SeriesNumber,
             image_instance_number=dataset.InstanceNumber,
         )
+        sorted_filename = clean_path(sorted_filename)
 
     except Exception as e:
         logger.exception('something wrong with {}'.format(filename))
+        logger.exception(e)
         return None
 
     sorted_full_filename = os.path.join(path, sorted_filename)
@@ -115,7 +117,7 @@ def sort_rule_CFMM(filename):
         return '{0:08X}'.format(code)
 
     try:
-        dataset = pydicom.read_file(filename)
+        dataset = pydicom.read_file(filename, stop_before_pixels=True)
 
         # CFMM's newer data:'PI^project'->['PI','project']
         # CFMM's older GE data:'PI project'->['PI','project']
@@ -142,6 +144,7 @@ def sort_rule_CFMM(filename):
         )
     except Exception as e:
         logger.exception('something wrong with {}'.format(filename))
+        logger.exception(e)
         return None
 
     sorted_full_filename = os.path.join(path, sorted_filename)
