@@ -29,10 +29,10 @@ build:
 	pushd ../;sudo ${SINGULARITY} build --force ${SINGULARITY_IMAGE} ${SINGULARITY_FILE};popd
 
 singularity_test_small:
-	sudo ${SINGULARITY} run -B /mnt:/mnt -B /home:/home ${SINGULARITY_IMAGE} /mnt/hgfs/projects/dicom2tar/data/small_data ~/test/dicom2tar
+	${SINGULARITY} run -B /mnt:/mnt -B /home:/home ${SINGULARITY_IMAGE} /mnt/hgfs/projects/dicom2tar/data/small_data ~/test/dicom2tar
 	
 singularity_test_cmrr:
-	sudo ${SINGULARITY} run -B /mnt:/mnt -B /home:/home ${SINGULARITY_IMAGE} /mnt/hgfs/projects/dicom2tar/data/MRS_Physio_data/2017_11_30_MS12 ~/test/dicom2tar
+	${SINGULARITY} run -B /mnt:/mnt -B /home:/home ${SINGULARITY_IMAGE} /mnt/hgfs/projects/dicom2tar/data/MRS_Physio_data/2017_11_30_MS12 ~/test/dicom2tar
 
 singularity_test_cfmm:
-	sudo ${SINGULARITY} run -B /mnt:/mnt -B /home:/home ${SINGULARITY_IMAGE} /mnt/hgfs/projects/dicom2tar/data/MRS_Physio_data/three_dicoms_from_Igor ~/test/dicom2tar
+	${SINGULARITY} run -B /mnt:/mnt -B /home:/home ${SINGULARITY_IMAGE} /mnt/hgfs/projects/dicom2tar/data/MRS_Physio_data/three_dicoms_from_Igor ~/test/dicom2tar
