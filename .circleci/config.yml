@@ -1,0 +1,101 @@
+version: 2
+jobs:
+  build:
+    machine: true
+    steps:
+      - checkout
+      - run: 
+          name: install dependencies
+          command: |
+            sudo apt-get update; sudo apt-get install wget zip
+            sudo pip install --upgrade pip setuptools wheel twine
+      - run:
+           name: install editable mode in order to turn the binary defined by setup.py's entry_points
+           command: |
+             sudo pip install -e .  
+             pip list
+             which dicom2tar
+             which extractCMRRPhysio  
+      - run:
+          name: test 
+          command: |
+            # regular_cfmm.zip
+            pushd /tmp
+
+            wget -O regular_cfmm.zip https://www.dropbox.com/s/x3e1n5mpvps28rl/regular_cfmm.zip?dl=0
+            unzip -P $TEST_DATA_ZIP_PASSWORD regular_cfmm.zip
+            dicom2tar regular_cfmm_for_zip .
+            test -f Khan_NeuroAnalytics_18000101_anon_anon.729925DE.tar
+            
+            # MRS_Physio_data.zip
+            wget -O MRS_Physio_data.zip https://www.dropbox.com/s/nzm7gvjbdlpxvsl/MRS_Physio_data.zip?dl=0
+            unzip -P $TEST_DATA_ZIP_PASSWORD MRS_Physio_data.zip
+            dicom2tar MRS_Physio_data_for_zip .
+            test -f Bartha_AFLM_18000101_anon_anon.47B8DBE8.attached.tar  
+            test -f Kohler_PS_PRC_18000101_anon_anon.DEFDF409.attached.tar  
+            test -f Menon_HighRes_fMRI_18000101_anon_anon.A5B834E1.attached.tar
+            test -f Bartha_AFLM_18000101_anon_anon.47B8DBE8.tar           
+            test -f Kohler_PS_PRC_18000101_anon_anon.DEFDF409.tar           
+            test -f Menon_HighRes_fMRI_18000101_anon_anon.A5B834E1.tar
+
+            # cfmm_GE_older_dicom_tags.zip
+            wget -O cfmm_GE_older_dicom_tags.zip https://www.dropbox.com/s/kjcf63wmrqtvynn/cfmm_GE_older_dicom_tags.zip?dl=0
+            unzip -P $TEST_DATA_ZIP_PASSWORD cfmm_GE_older_dicom_tags.zip
+            dicom2tar cfmm_GE_older_dicom_tags .
+            test -f PETERS_DTI_18000101_anon_anon.F1F99879.tar
+
+            rm *.tar   
+            popd
+      - run:
+          name: init .pypirc
+          environment:
+            PYPI_USERNAME: yinglilu
+          command: |
+            echo -e "[pypi]" >> ~/.pypirc
+            echo -e "username = $PYPI_USERNAME" >> ~/.pypirc
+            echo -e "password = $PYPI_PASSWORD" >> ~/.pypirc
+      - run:
+          name: build and upload to PyPI
+          command: |
+            sudo python setup.py sdist bdist_wheel
+            twine upload --skip-existing dist/*
+
+      - run:
+          name: install singularity
+          environment:
+            VERSION: 2.5.2
+          command: |
+              #pre-install singularity
+              sudo apt-get update; sudo apt-get install -y libarchive-dev squashfs-tools
+              # install singularity
+              wget https://github.com/singularityware/singularity/releases/download/$VERSION/singularity-$VERSION.tar.gz
+              tar xvf singularity-$VERSION.tar.gz
+              pushd singularity-$VERSION
+              ./configure --prefix=/usr/local
+              make
+              sudo make install
+              popd
+              singularity selftest  
+              # build image
+              sudo singularity build /tmp/test.simg ./singularity/Singularity
+              # test build
+              test -f /tmp/test.simg
+      - run:
+          name: test on singularity           
+          command: |
+              # regular_cfmm.zip
+              singularity run -B /tmp:/tmp /tmp/test.simg /tmp/regular_cfmm_for_zip /tmp
+              test -f /tmp/Khan_NeuroAnalytics_18000101_anon_anon.729925DE.tar
+
+              # MRS_Physio_data.zip
+              singularity run -B /tmp:/tmp /tmp/test.simg /tmp/MRS_Physio_data_for_zip /tmp
+              test -f /tmp/Bartha_AFLM_18000101_anon_anon.47B8DBE8.attached.tar  
+              test -f /tmp/Kohler_PS_PRC_18000101_anon_anon.DEFDF409.attached.tar  
+              test -f /tmp/Menon_HighRes_fMRI_18000101_anon_anon.A5B834E1.attached.tar
+              test -f /tmp/Bartha_AFLM_18000101_anon_anon.47B8DBE8.tar           
+              test -f /tmp/Kohler_PS_PRC_18000101_anon_anon.DEFDF409.tar           
+              test -f /tmp/Menon_HighRes_fMRI_18000101_anon_anon.A5B834E1.tar
+
+              #cfmm_GE_older_dicom_tags.zip
+              singularity run -B /tmp:/tmp /tmp/test.simg /tmp/cfmm_GE_older_dicom_tags /tmp
+              test -f /tmp/PETERS_DTI_18000101_anon_anon.F1F99879.tar
