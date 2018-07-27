@@ -15,31 +15,42 @@ jobs:
             sudo pip install -e .
       - run:
           name: test
-          environment: 
-            OUTPUT_DIR: /tmp
           command: |
-            wget -O regular_cfmm.zip https://www.dropbox.com/s/x3e1n5mpvps28rl/regular_cfmm.zip?dl=0 
-            unzip -P $TEST_ZIP_PASSWORD regular_cfmm.zip
-            dicom2tar regular_cfmm.zip /tmp
-            test -f  /tmp/Khan_NeuroAnalytics_18000101_anon_anon.729925DE.tar
+            # regular_cfmm.zip
+            wget -O regular_cfmm.zip https://www.dropbox.com/s/x3e1n5mpvps28rl/regular_cfmm.zip?dl=0
+            unzip -P $TEST_DATA_ZIP_PASSWORD regular_cfmm.zip
+            dicom2tar regular_cfmm_for_zip /tmp
+            test -f /tmp/Khan_NeuroAnalytics_18000101_anon_anon.729925DE.tar
 
-            extractCMRRPhysio ./tests/data/test.dcm  ${OUTPUT_DIR}
-            diff ${OUTPUT_DIR}/Physio_20171130_122138_c71e64f9-f493-4ca9-8e92-473f5e0616cc_Info.log ./tests/data/matlab_results/Physio_20171130_122138_c71e64f9-f493-4ca9-8e92-473f5e0616cc_Info.log
-            diff ${OUTPUT_DIR}/Physio_20171130_122138_c71e64f9-f493-4ca9-8e92-473f5e0616cc_PULS.log ./tests/data/matlab_results/Physio_20171130_122138_c71e64f9-f493-4ca9-8e92-473f5e0616cc_PULS.log
-            diff ${OUTPUT_DIR}/Physio_20171130_122138_c71e64f9-f493-4ca9-8e92-473f5e0616cc_RESP.log ./tests/data/matlab_results/Physio_20171130_122138_c71e64f9-f493-4ca9-8e92-473f5e0616cc_RESP.log
-      - run:
-          name: init .pypirc
-          environment:
-            PYPI_USERNAME: yinglilu
-          command: |
-            echo -e "[pypi]" >> ~/.pypirc
-            echo -e "username = $PYPI_USERNAME" >> ~/.pypirc
-            echo -e "password = $PYPI_PASSWORD" >> ~/.pypirc
-      - run:
-          name: build and upload to PyPI
-          command: |
-            sudo python setup.py sdist bdist_wheel
-            twine upload --skip-existing dist/*
+            # MRS_Physio_data.zip
+            wget -O MRS_Physio_data.zip https://www.dropbox.com/s/nzm7gvjbdlpxvsl/MRS_Physio_data.zip?dl=0
+            unzip -P $TEST_DATA_ZIP_PASSWORD MRS_Physio_data.zip
+            dicom2tar MRS_Physio_data_for_zip /tmp
+            test -f /tmp/Bartha_AFLM_18000101_anon_anon.47B8DBE8.attached.tar  
+		        test -f /tmp/Kohler_PS_PRC_18000101_anon_anon.DEFDF409.attached.tar  
+		        test -f /tmp/Menon_HighRes_fMRI_18000101_anon_anon.A5B834E1.attached.tar
+		        test -f /tmp/Bartha_AFLM_18000101_anon_anon.47B8DBE8.tar           
+		        test -f /tmp/Kohler_PS_PRC_18000101_anon_anon.DEFDF409.tar           
+		        test -f /tmp/Menon_HighRes_fMRI_18000101_anon_anon.A5B834E1.tar
+
+            # cfmm_GE_older_dicom_tags.zip
+            wget -O cfmm_GE_older_dicom_tags.zip https://www.dropbox.com/s/kjcf63wmrqtvynn/cfmm_GE_older_dicom_tags.zip?dl=0
+            unzip -P $TEST_DATA_ZIP_PASSWORD cfmm_GE_older_dicom_tags.zip
+            dicom2tar cfmm_GE_older_dicom_tags_for_zip /tmp
+            test -f /tmp/PETERS_DTI_18000101_anon_anon.F1F99879.tar
+      # - run:
+      #     name: init .pypirc
+      #     environment:
+      #       PYPI_USERNAME: yinglilu
+      #     command: |
+      #       echo -e "[pypi]" >> ~/.pypirc
+      #       echo -e "username = $PYPI_USERNAME" >> ~/.pypirc
+      #       echo -e "password = $PYPI_PASSWORD" >> ~/.pypirc
+      # - run:
+      #     name: build and upload to PyPI
+      #     command: |
+      #       sudo python setup.py sdist bdist_wheel
+      #       twine upload --skip-existing dist/*
 
 
  
