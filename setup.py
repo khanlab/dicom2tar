@@ -18,5 +18,5 @@ setuptools.setup(name='dicom2tar',
                          'dicom2tar = dicom2tar.main:run']},
                  packages=setuptools.find_packages(),
                  install_requires=['pydicom',
-                                   'extractCMRRPhysio', 'dicomunwrap'],
+                                   'extractCMRRPhysio', 'DicomRaw'],
                  zip_safe=False)
