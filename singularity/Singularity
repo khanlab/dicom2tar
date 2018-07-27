@@ -1,8 +1,9 @@
 Bootstrap: docker
 From: ubuntu:xenial
 
-%files
-dicom2tar.py 
+#------------------------------------
+%setup
+#------------------------------------
 
 #------------------------------------
 %post
@@ -19,16 +20,10 @@ apt-get update && apt-get install -y --no-install-recommends apt-utils \
     python2.7 \
     python-pip \
     rsync \
-    openssh-client
-
-pip install -U pip setuptools
-
-git clone https://www.github.com/pydicom/pydicom.git
-cd pydicom
-git checkout 1314e86e3a96d0c226a03fb21136c0ff3c3ce7d3  #commit from Feb 1 2018
-python setup.py install
-
+    
+sudo pip install --upgrade pip setuptools
+sudo pip install dicom2tar
 
 %runscript 
-exec /dicom2tar.py $@
+exec dicom2tar "$@"
 
