@@ -27,11 +27,11 @@ jobs:
             unzip -P $TEST_DATA_ZIP_PASSWORD MRS_Physio_data.zip
             dicom2tar MRS_Physio_data_for_zip /tmp
             test -f /tmp/Bartha_AFLM_18000101_anon_anon.47B8DBE8.attached.tar  
-		        test -f /tmp/Kohler_PS_PRC_18000101_anon_anon.DEFDF409.attached.tar  
-		        test -f /tmp/Menon_HighRes_fMRI_18000101_anon_anon.A5B834E1.attached.tar
-		        test -f /tmp/Bartha_AFLM_18000101_anon_anon.47B8DBE8.tar           
-		        test -f /tmp/Kohler_PS_PRC_18000101_anon_anon.DEFDF409.tar           
-		        test -f /tmp/Menon_HighRes_fMRI_18000101_anon_anon.A5B834E1.tar
+            test -f /tmp/Kohler_PS_PRC_18000101_anon_anon.DEFDF409.attached.tar  
+            test -f /tmp/Menon_HighRes_fMRI_18000101_anon_anon.A5B834E1.attached.tar
+            test -f /tmp/Bartha_AFLM_18000101_anon_anon.47B8DBE8.tar           
+            test -f /tmp/Kohler_PS_PRC_18000101_anon_anon.DEFDF409.tar           
+            test -f /tmp/Menon_HighRes_fMRI_18000101_anon_anon.A5B834E1.tar
 
             # cfmm_GE_older_dicom_tags.zip
             wget -O cfmm_GE_older_dicom_tags.zip https://www.dropbox.com/s/kjcf63wmrqtvynn/cfmm_GE_older_dicom_tags.zip?dl=0
