@@ -1,0 +1,45 @@
+version: 2
+jobs:
+  build:
+    docker:
+      - image: circleci/python:2.7.15
+    steps:
+      - checkout
+      - run: 
+          name: install dependencies
+          command: |
+            sudo pip install --upgrade setuptools wheel twine
+      - run:
+          name: install editable mode in order to turn the binary defined by setup.py's entry_points
+          command:
+            sudo pip install -e .
+      - run:
+          name: test
+          environment: 
+            OUTPUT_DIR: /tmp
+          command: |
+            wget -O regular_cfmm.zip https://www.dropbox.com/s/x3e1n5mpvps28rl/regular_cfmm.zip?dl=0 
+            unzip -P $TEST_ZIP_PASSWORD regular_cfmm.zip
+            dicom2tar regular_cfmm.zip /tmp
+            test -f  /tmp/Khan_NeuroAnalytics_18000101_anon_anon.729925DE.tar
+
+            extractCMRRPhysio ./tests/data/test.dcm  ${OUTPUT_DIR}
+            diff ${OUTPUT_DIR}/Physio_20171130_122138_c71e64f9-f493-4ca9-8e92-473f5e0616cc_Info.log ./tests/data/matlab_results/Physio_20171130_122138_c71e64f9-f493-4ca9-8e92-473f5e0616cc_Info.log
+            diff ${OUTPUT_DIR}/Physio_20171130_122138_c71e64f9-f493-4ca9-8e92-473f5e0616cc_PULS.log ./tests/data/matlab_results/Physio_20171130_122138_c71e64f9-f493-4ca9-8e92-473f5e0616cc_PULS.log
+            diff ${OUTPUT_DIR}/Physio_20171130_122138_c71e64f9-f493-4ca9-8e92-473f5e0616cc_RESP.log ./tests/data/matlab_results/Physio_20171130_122138_c71e64f9-f493-4ca9-8e92-473f5e0616cc_RESP.log
+      - run:
+          name: init .pypirc
+          environment:
+            PYPI_USERNAME: yinglilu
+          command: |
+            echo -e "[pypi]" >> ~/.pypirc
+            echo -e "username = $PYPI_USERNAME" >> ~/.pypirc
+            echo -e "password = $PYPI_PASSWORD" >> ~/.pypirc
+      - run:
+          name: build and upload to PyPI
+          command: |
+            sudo python setup.py sdist bdist_wheel
+            twine upload --skip-existing dist/*
+
+
+ 
