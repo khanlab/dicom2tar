@@ -334,7 +334,8 @@ class DicomSorter():
                         tar.add(unwraped_dir, arcname=tar_arcname)
 
         # for logging
-        tar_full_filenames = tar_full_filename_dict.keys()
+        # list: compatible with python 3
+        tar_full_filenames = list(tar_full_filename_dict.keys())
 
         return tar_full_filenames + attached_tar_full_filenames
 
