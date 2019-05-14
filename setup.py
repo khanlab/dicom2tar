@@ -20,5 +20,6 @@ setuptools.setup(name='dicom2tar',
                  install_requires=['pydicom==1.1.0',
                                    'extractCMRRPhysio', 
                                    'DicomRaw',
-                                   'dcmstack==0.7.0'],
+                                   'dcmstack==0.7.0',
+                                   'pandas==0.24.2'],
                  zip_safe=False)
