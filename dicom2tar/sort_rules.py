@@ -17,7 +17,8 @@ import os
 import re
 import pydicom
 import logging
-
+import csv
+import dcmstack as ds
 
 def sort_rule_demo(filename):
     '''
@@ -153,3 +154,156 @@ def sort_rule_CFMM(filename):
     sorted_full_filename = os.path.join(path, sorted_filename)
 
     return sorted_full_filename
+
+def sort_rule_clinical(filename):
+    '''
+    Clinical sort rule:
+
+    patient_name
+        |-study_date
+            |-modality
+                |-series_number
+                  |-{patient}.{modality}.{series:04d}.{image:04d}.{study_date}.{unique}.dcm
+                  ... 
+                |-series_number
+                ...
+    intput:
+        filename: dicom filename
+    output:
+        a dictionary:
+            key: filename
+            value: patient_name/study_date/modality/sereis_number/{patient}.{modality}.{series:04d}.{image:04d}.{study_date}.{unique}.dcm
+
+    '''
+    def write_error_file(my_file, errorInfoTemp):
+        if os.path.exists(my_file):
+            with open(my_file, 'r') as readFile:
+                reader = csv.reader(readFile, delimiter='\t')
+                lines = list(reader)
+                if errorInfoTemp.split('\t') not in lines:
+                    with open(my_file, 'a') as writeFile:
+                        writeFile.write(errorInfoTemp)
+                        writeFile.write( "\n" )
+        else:
+            with open(my_file, 'w') as writeFile:
+                writeFile.write("\t".join(['subject','date','series','issue']))
+                writeFile.write( "\n" )
+                writeFile.write(errorInfoTemp)
+                writeFile.write( "\n" )
+    def clean_path(path):
+            return re.sub(r'[^a-zA-Z0-9.-]', '_', '{0}'.format(path))
+    
+    def hashcode(value):
+        code = 0
+        for character in value:
+            code = (code * 31 + ord(character)) & 0xffffffff
+        return '{0:08X}'.format(code)
+            
+    # This will ignore any dicomdir present in the folder
+    if all(['DICOMDIR' not in filename, not filename.endswith('OR_dates.tsv')]):
+        logger = logging.getLogger(__name__)
+
+        try:
+            dataset = pydicom.read_file(filename, stop_before_pixels=True, force=True)
+            study_date = dataset.StudyDate[0:4] + '_' + dataset.StudyDate[4:6] + '_' + dataset.StudyDate[6:8]
+            
+            # This will skip any order sheets 
+            if dataset.Modality in {'SR','PR'}:
+                errorInfoTemp = "\t".join(['P' + [s for s in filename.split('\\') if 'sub' in s][0].split('-')[1], study_date, 
+                                clean_path('{series:04d}'.format(series=dataset.SeriesNumber)), dataset.Modality])
+                my_file = os.path.join("\\".join(filename.split('\\')[:[i for i, s in enumerate(filename.split('\\')) if 'sub' in s][0]]), 'errorInfo.tsv')
+                write_error_file(my_file, errorInfoTemp)
+                return None
+            
+            # This will skip any order sheets and localizers
+            elif [x for x in dataset.ImageType if x in {'SECONDARY','LOCALIZER'}]:
+                return None
+            else:
+                if 'SIEMENS' in dataset.Manufacturer:
+                    errorInfoTemp = "\t".join(['P' + [s for s in filename.split('\\') if 'sub' in s][0].split('-')[1], study_date, 
+                                        clean_path('{series:04d}'.format(series=dataset.SeriesNumber)), 'SIEMENS'])
+                    my_file = os.path.join("\\".join(filename.split('\\')[:[i for i, s in enumerate(filename.split('\\')) if 'sub' in s][0]]), 'errorInfo.tsv')
+                    write_error_file(my_file, errorInfoTemp)
+                    return None
+                else:
+                    try:
+                        csaReader = ds.wrapper_from_data(dataset)
+                        modality = dataset.Modality
+                        
+                        #--- INTRAOP X-RAY determination
+                        if any(substring in modality for substring in {'Intraoperative','Skull','OT','XA','RF'}):
+                            if 'CR' not in dataset.Modality:
+                                or_date = dataset.StudyDate[0:4] + '_' + dataset.StudyDate[4:6] + '_' + dataset.StudyDate[6:8]
+                                orDateTemp = "\t".join(['P' + [s for s in filename.split('\\') if 'sub' in s][0].split('-')[1], or_date])
+                                my_file = os.path.join("\\".join(filename.split('\\')[:[i for i, s in enumerate(filename.split('\\')) if 'sub' in s][0]+1]), 'OR_dates.tsv')
+                                
+                                if os.path.exists(my_file):
+                                    with open(my_file, 'r') as readFile:
+                                        reader = csv.reader(readFile, delimiter='\t')
+                                        lines = list(reader)
+                                        if orDateTemp.split('\t') not in lines:
+                                            with open(my_file, 'a') as writeFile:
+                                                writeFile.write(orDateTemp)
+                                                writeFile.write( "\n" )
+                                else:
+                                    with open(my_file, 'w') as writeFile:
+                                        writeFile.write("\t".join(['subject','or_date']))
+                                        writeFile.write( "\n" )
+                                        writeFile.write(orDateTemp)
+                                        writeFile.write( "\n" )
+                                return None
+                            
+                            elif all(['CR' in dataset.Modality, 'Skull Routine Portable' in dataset.StudyDescription]):
+                                errorInfoTemp = "\t".join(['P' + [s for s in filename.split('\\') if 'sub' in s][0].split('-')[1], study_date, 
+                                        clean_path('{series:04d}'.format(series=dataset.SeriesNumber)), dataset.StudyDescription])
+                                my_file = os.path.join("\\".join(filename.split('\\')[:[i for i, s in enumerate(filename.split('\\')) if 'sub' in s][0]]), 'errorInfo.tsv')
+                                write_error_file(my_file, errorInfoTemp)
+                                return None
+                            else:
+                                patient = 'P' + [s for s in filename.split('\\') if 'sub' in s][0].split('-')[1] + '_' + study_date
+                                series_number = clean_path('{series:04d}'.format(series=dataset.SeriesNumber))
+                                studyID_and_hash_studyInstanceUID = clean_path('.'.join([dataset.StudyID or 'NA',
+                                                                             hashcode(dataset.StudyInstanceUID)]))
+                                
+                                path = os.path.join(patient, dataset.StudyDate, studyID_and_hash_studyInstanceUID, modality, series_number)
+                                sorted_filename = '{patient}.{modality}.{series:04d}.{image:04d}.{study_date}.{unique}.dcm'.format(
+                                    patient=patient.upper(),
+                                    modality=modality,
+                                    series=dataset.SeriesNumber,
+                                    image=dataset.InstanceNumber,
+                                    study_date=dataset.StudyDate,
+                                    unique=hashcode(dataset.SOPInstanceUID),
+                                )
+                        else:
+                            if dataset.SeriesDescription.lower() not in {'loc','dose report'}:
+                                patient = 'P' + [s for s in filename.split('\\') if 'sub' in s][0].split('-')[1] + '_' + study_date
+                                series_number = clean_path('{series:04d}'.format(series=dataset.SeriesNumber))
+                                studyID_and_hash_studyInstanceUID = clean_path('.'.join([dataset.StudyID or 'NA',
+                                                                             hashcode(dataset.StudyInstanceUID)]))
+
+                                path = os.path.join(patient, dataset.StudyDate, studyID_and_hash_studyInstanceUID, modality, series_number)
+                                sorted_filename = '{patient}.{modality}.{series:04d}.{image:04d}.{study_date}.{unique}.dcm'.format(
+                                    patient=patient.upper(),
+                                    modality=modality,
+                                    series=dataset.SeriesNumber,
+                                    image=dataset.InstanceNumber,
+                                    study_date=dataset.StudyDate,
+                                    unique=hashcode(dataset.SOPInstanceUID),
+                                )
+                    except Exception as e:
+                        errorInfoTemp = "\t".join(['P' + [s for s in filename.split('\\') if 'sub' in s][0].split('-')[1], study_date, 
+                                            clean_path('{series:04d}'.format(series=dataset.SeriesNumber)), 'csaReader'])
+                        my_file = os.path.join("\\".join(filename.split('\\')[:[i for i, s in enumerate(filename.split('\\')) if 'sub' in s][0]]), 'errorInfo.tsv')
+                        write_error_file(my_file, errorInfoTemp)
+                        return None
+
+        except Exception as e:
+            logger.exception('something wrong with {}'.format(filename))
+            logger.exception(e)
+            return None
+        
+        if 'path' in locals():
+            sorted_full_filename = os.path.join(path, sorted_filename)
+            return sorted_full_filename
+        else:
+            return None
