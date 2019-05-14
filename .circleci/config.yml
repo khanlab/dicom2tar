@@ -23,6 +23,7 @@ jobs:
             pushd /tmp
 
             wget -O regular_cfmm.zip https://www.dropbox.com/s/x3e1n5mpvps28rl/regular_cfmm.zip?dl=0
+            echo unzip -P $TEST_DATA_ZIP_PASSWORD regular_cfmm.zip
             unzip -P $TEST_DATA_ZIP_PASSWORD regular_cfmm.zip
             dicom2tar regular_cfmm_for_zip .
             test -f Khan_NeuroAnalytics_18000101_anon_anon.729925DE.tar
