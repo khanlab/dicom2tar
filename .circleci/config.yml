@@ -8,7 +8,7 @@ jobs:
           name: install dependencies
           command: |
             sudo apt-get update; sudo apt-get install wget zip
-            sudo pip install --upgrade pip setuptools wheel twine
+            sudo pip install --upgrade pip setuptools wheel twine==1.10.0 #importlib-metadata keyring tqdm  requests-toolbelt
       - run:
            name: install editable mode in order to turn the binary defined by setup.py's entry_points
            command: |
@@ -43,6 +43,12 @@ jobs:
             unzip -P $TEST_DATA_ZIP_PASSWORD cfmm_GE_older_dicom_tags.zip
             dicom2tar cfmm_GE_older_dicom_tags .
             test -f PETERS_DTI_18000101_anon_anon.F1F99879.tar
+
+            # anonymized GE data
+            # todo
+            
+            # anonymized Philips data
+            # todo
 
             rm *.tar   
             popd

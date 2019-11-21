@@ -2,6 +2,15 @@
 '''
 sort or tar CFMM' data with DicomSorter
 
+
+Update: 2019-11-21
+
+Add DICOM tag option arguments to handel DICOM files missing(or empty): 
+StudyDesciption, StudyDate, PatientName, StudyID, StudyInstanceUID,
+SeriesNumber,InstanceNumber, and SOPInstanceUID. These tags are 
+necessary to CFMM sort rule
+
+
 Author: YingLi Lu
 Email:  yinglilu@gmail.com
 Date:   2018-05-22
@@ -13,6 +22,7 @@ Note:
 import sys
 import os
 import logging
+import argparse
 
 import sort_rules
 import DicomSorter
@@ -23,7 +33,7 @@ logging.basicConfig(level=logging.DEBUG,
                     format='%(asctime)s - %(levelname)s -%(message)s')
 
 
-def main(dicom_dir, output_dir, clinical_scans):
+def main(dicom_dir, output_dir, args):
     '''
     use DicomSorter sort or tar CFMM's dicom data
 
@@ -45,8 +55,9 @@ def main(dicom_dir, output_dir, clinical_scans):
     # CFMM sort rule
     ######
     try:
-        if not clinical_scans:
-            with DicomSorter.DicomSorter(dicom_dir, sort_rules.sort_rule_CFMM, output_dir) as d:
+        if not args.clinical_scans:
+
+            with DicomSorter.DicomSorter(dicom_dir, sort_rules.sort_rule_CFMM, output_dir, args) as d:
                 # #######
                 # # sort
                 # #######
@@ -54,7 +65,7 @@ def main(dicom_dir, output_dir, clinical_scans):
                 # # logging
                 # for item in sorted_dirs:
                 #     logger.info("sorted directory created: {}".format(item))
-    
+
                 #######
                 # tar
                 #######
@@ -63,7 +74,7 @@ def main(dicom_dir, output_dir, clinical_scans):
                 # logging
                 for item in tar_full_filenames:
                     logger.info("tar file created: {}".format(item))
-    
+
             # ######
             # # demo sort rule
             # ######
@@ -73,19 +84,21 @@ def main(dicom_dir, output_dir, clinical_scans):
             #     #logging
             #     for item in sorted_dirs:
             #         logger.info("sorted directory created: {}".format(item))
-    
+
             #     # tar
             #     # patient_name/study_date/series_number/new_filename.dcm
             #     tar_full_filenames = d.tar(2)
             #     # logging
             #     for item in tar_full_filenames:
             #         logger.info("tar file created: {}".format(item))
-        
+
         else:
             ######
             # Clinical sort rule
             ######
-            with DicomSorter.DicomSorter(dicom_dir, sort_rules.sort_rule_clinical, output_dir) as d:
+            logger.info("These are clinical scans.")
+
+            with DicomSorter.DicomSorter(dicom_dir, sort_rules.sort_rule_clinical, output_dir, args) as d:
                 # tar
                 # study_date/patient/modality/series_number/new_filename.dcm
                 tar_full_filenames = d.tar(4)
@@ -93,31 +106,36 @@ def main(dicom_dir, output_dir, clinical_scans):
                 # logging
                 for item in tar_full_filenames:
                     logger.info("tar file created: {}".format(item))
-            
+
             ch.tarSession(output_dir, dicom_dir, modality_sep=True)
             ch.combine_or_dates(dicom_dir, output_dir)
             ch.combine_error_info_tsv(dicom_dir, output_dir)
-            
+
     except Exception as e:
         logger.exception(e)
 
 
 def run():
 
-    if len(sys.argv)-1 < 2:
-        print("Usage: dicom2tar dicom_dir output_dir, Optional: clinical_scans(True/False, default = False)")
-        sys.exit()
-    else:
-        dicom_dir = sys.argv[1]
-        output_dir = sys.argv[2]
-        clinical_scans = False
-        
-        if len(sys.argv)>3:
-            if sys.argv[3].lower() in {'true', '1', 't'}:
-                clinical_scans = True
-                print("These are clinical scans.")
+    # arg parser
+    parser = argparse.ArgumentParser()
 
-    main(dicom_dir, output_dir, clinical_scans)
+    parser.add_argument("dicom_dir")
+    parser.add_argument('output_dir')
+    parser.add_argument("--clinical_scans", action="store_true")
+    parser.add_argument("--StudyDescription",
+                        nargs='?', default='PI^Project')
+    parser.add_argument("--StudyDate",
+                        nargs='?', default='19000101')
+    parser.add_argument("--PatientName",
+                        nargs='?', default='Anonymous')
+    args = parser.parse_args()
+
+    dicom_dir = args.dicom_dir
+    output_dir = args.output_dir
+
+    # main
+    main(dicom_dir, output_dir, args)
 
 
 if __name__ == "__main__":

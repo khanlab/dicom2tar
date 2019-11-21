@@ -3,7 +3,7 @@ import setuptools
 with open("README.md", "r") as fh:
     long_description = fh.read()
 
-VERSION = "0.1.1"
+VERSION = "0.2.0"
 setuptools.setup(name='dicom2tar',
                  version=VERSION,
                  description="sort or tar CFMM' data with DicomSorter",
@@ -18,7 +18,7 @@ setuptools.setup(name='dicom2tar',
                          'dicom2tar = dicom2tar.main:run']},
                  packages=setuptools.find_packages(),
                  install_requires=['pydicom==1.1.0',
-                                   'extractCMRRPhysio', 
+                                   'extractCMRRPhysio',
                                    'DicomRaw',
                                    'dcmstack==0.7.0',
                                    'pandas==0.24.2'],
