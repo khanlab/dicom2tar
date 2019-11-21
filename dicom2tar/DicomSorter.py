@@ -55,7 +55,7 @@ class DicomSorter():
 
     '''
 
-    def __init__(self, dicom_dir, sort_rule_function, output_dir,
+    def __init__(self, dicom_dir, sort_rule_function, output_dir, args,
                  extract_to_dir='', dicomunwrap_path='dicomunwrap', simens_cmrr_mb_unwrap_path='extractCMRRPhysio'):
         '''
         init DicomSorter
@@ -65,6 +65,7 @@ class DicomSorter():
         self.dicom_dir = dicom_dir
         self.sort_rule_function = sort_rule_function
         self.output_dir = output_dir
+        self.args = args
 
         # extract_to_dir, default is platform's tmp dir
         if not extract_to_dir:
@@ -360,7 +361,7 @@ class DicomSorter():
                     if not full_filename.endswith(self._compressed_exts):
                         try:
                             sorted_relative_path_filename = sort_rule_function(
-                                full_filename)
+                                full_filename, self.args)
                             # apply sort_rule_function on non-dicom or bad dicom return None
                             if sorted_relative_path_filename is not None:
                                 before_after_sort_rule_list.append(

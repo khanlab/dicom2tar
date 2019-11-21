@@ -44,6 +44,12 @@ jobs:
             dicom2tar cfmm_GE_older_dicom_tags .
             test -f PETERS_DTI_18000101_anon_anon.F1F99879.tar
 
+            # anonymized GE data
+            # todo
+            
+            # anonymized Philips data
+            # todo
+
             rm *.tar   
             popd
       - run:
