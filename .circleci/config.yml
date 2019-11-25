@@ -45,10 +45,17 @@ jobs:
             test -f PETERS_DTI_18000101_anon_anon.F1F99879.tar
 
             # anonymized GE data
-            # todo
+            wget -O anonymized_GE_data_from_suzanne.zip https://www.dropbox.com/s/5bw6g7ia53ipvo3/anonymized_GE_data_from_suzanne.zip?dl=0
+            unzip -P $TEST_DATA_ZIP_PASSWORD anonymized_GE_data_from_suzanne.zip
+            dicom2tar anonymized_GE_data_from_suzanne .
+            test -f PI_Project_20180704_AMLUNG_AUD_1061_04JUL2018_7870.2DCC7BC5.tar
+
             
             # anonymized Philips data
-            # todo
+            wget -O anonymized_philips_data_from_suzanne.zip https://www.dropbox.com/s/zh0e012w0llzanv/anonymized_philips_data_from_suzanne.zip?dl=0
+            unzip -P $TEST_DATA_ZIP_PASSWORD anonymized_philips_data_from_suzanne.zip
+            dicom2tar anonymized_philips_data_from_suzanne .
+            test -f PI_Project_19000101_Anonymous_EGVKNLE1Q7.102CCED7.tar
 
             rm *.tar   
             popd
