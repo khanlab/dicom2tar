@@ -21,5 +21,5 @@ setuptools.setup(name='dicom2tar',
                                    'extractCMRRPhysio',
                                    'DicomRaw',
                                    'dcmstack==0.7.0',
-                                   'pandas>=0.24.2'],
+                                   'pandas>=0.25.3'],
                  zip_safe=False)
