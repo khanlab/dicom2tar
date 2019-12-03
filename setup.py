@@ -3,7 +3,7 @@ import setuptools
 with open("README.md", "r") as fh:
     long_description = fh.read()
 
-VERSION = "0.2.1"
+VERSION = "0.2.2"
 setuptools.setup(name='dicom2tar',
                  version=VERSION,
                  description="sort or tar CFMM' data with DicomSorter",
