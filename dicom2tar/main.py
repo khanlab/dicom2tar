@@ -24,10 +24,10 @@ import os
 import logging
 import argparse
 
-import sort_rules
-import DicomSorter
+from . import sort_rules
+from . import DicomSorter
 
-import clinical_helpers as ch
+from . import clinical_helpers as ch
 
 logging.basicConfig(level=logging.DEBUG,
                     format='%(asctime)s - %(levelname)s -%(message)s')
